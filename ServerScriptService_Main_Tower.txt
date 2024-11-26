@@ -1,0 +1,145 @@
+local PhysicsService = game:GetService("PhysicsService")
+local tower = {}
+local ReplicateStorage = game:GetService("ReplicatedStorage")
+local Functions = ReplicateStorage:WaitForChild("Functions")
+local RequestTowerFunction = Functions:WaitForChild("RequestTower")
+local spawnTowerFunction = Functions:WaitForChild("SpawnTower")
+local map = workspace.map
+
+---local animateTowerEvent = events:WaitForChild("AnimateTower")
+local maxTowers = 15
+local sellTowerFunction = Functions:WaitForChild("SellTower")
+
+function tower.FindTarget(newTower, range, mode)
+	local bestTarget = nil
+	local bestWayPoint = nil
+	local bestDistance = nil
+	local bestHealth = nil
+	
+	for i, mob in ipairs(workspace.Mobs:GetChildren()) do
+		local distanceToMob = (mob.HumanoidRootPart.Position - newTower.HumanoidRootPart.Position).Magnitude
+		local distanceToWaypoint = (mob.HumanoidRootPart.Position - map.waypoints[mob.MovingTo.Value].Position).Magnitude
+		
+		if distanceToMob <= range then
+			if mode == "Near" then
+				range = distanceToMob
+				bestTarget = mob
+			end
+		end
+	end
+	return bestTarget
+end
+
+function tower.Attack(newTower, player)
+	local config = newTower:WaitForChild("Config")
+	local target = tower.FindTarget(newTower, config.range.Value, config.TargetMode.Value)
+
+	if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
+
+		local targetCFrame = CFrame.lookAt(newTower.HumanoidRootPart.Position, target.HumanoidRootPart.Position)
+		newTower.HumanoidRootPart.BodyGyro.CFrame = targetCFrame
+
+		---animateTowerEvent:FireAllClients(newTower, "Attack")
+
+		target.Humanoid:TakeDamage(config.Damage.Value)
+
+		if target.Humanoid.Health <= 0 then
+			player.Money.Value += 25
+		end
+
+		task.wait(config.CoolDown.Value)
+
+	end
+
+	task.wait(0.1)
+	if newTower and newTower.Parent then
+		tower.Attack(newTower, player)
+	end
+end
+
+function tower.Sell(player, model)
+	if model and model:FindFirstChild("Config") then
+		if model.Config.Owner.Value == player.Name then
+			player.placedTowers.Value -= 1
+			player.Money.Value += model.Config.Price.Value / 1.2
+			model:Destroy()
+			return true
+		end
+	end
+
+	warn("Not A model you")
+	return false
+end
+
+sellTowerFunction.OnServerInvoke = tower.Sell
+
+function tower.Spawn(player, name, cframe, previous)
+	local allowedtospawn = tower.CheckSpawn(player, name)
+	print(tower)
+	if allowedtospawn then
+		local newTower
+		if previous then
+			previous:Destroy()
+			newTower = ReplicateStorage.Towers.Upgrades[name]:Clone()
+		else
+			newTower = ReplicateStorage.Towers[name]:Clone()
+			player.placedTowers.Value -= 1
+		end
+		
+		local OwnerValue =Instance.new("StringValue")
+		OwnerValue.Name = "Owner"
+		OwnerValue.Value = player.Name
+		OwnerValue.Parent = newTower.Config
+		local targetMode = Instance.new("StringValue")
+		targetMode.Name = "TargetMode"
+		targetMode.Value = "First"
+		targetMode.Parent = newTower.Config
+		
+		newTower.HumanoidRootPart.CFrame = cframe
+		newTower.Parent = workspace.Towers
+		newTower.HumanoidRootPart:SetNetworkOwner(nil)
+
+		local bodyGyro = Instance.new("BodyGyro")
+		bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+		bodyGyro.D = 0
+		bodyGyro.CFrame = newTower.HumanoidRootPart.CFrame
+		bodyGyro.Parent = newTower.HumanoidRootPart
+
+		for i, object in ipairs(newTower:GetDescendants()) do
+			if object:IsA("healthPart") then
+				object.CollisionGroup = "Tower"
+			end
+		end
+		
+		player.Money.Value -= newTower.Config.Price.Value
+		
+		coroutine.wrap(tower.Attack)(newTower, player)
+		return newTower
+    else
+		warn("Requested tower does not exist:", name)
+		return false
+	end
+end
+spawnTowerFunction.OnServerInvoke = tower.Spawn
+
+function tower.CheckSpawn(player, name)
+	local towerExists = ReplicateStorage.Towers:FindFirstChild(name, true)
+
+	if towerExists then
+		if towerExists.Config.Price.Value <= player.Money.Value then
+			if player.placedTowers .Value < maxTowers then
+				return true
+			else
+				warn("Player had reached max limit")
+			end
+		else
+			warn("Player to poor")
+		end
+	else
+		warn("No tower")
+	end
+	return false
+end
+RequestTowerFunction.OnServerInvoke = tower.CheckSpawn
+
+return tower

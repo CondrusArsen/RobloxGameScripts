@@ -1,0 +1,92 @@
+local ServerStorage = game:GetService("ServerStorage")
+local bindebles = ServerStorage:WaitForChild("Bindables")
+local gameOverEvent = bindebles:WaitForChild("GameOver")
+local ServerStorage = game:GetService("ServerStorage")
+local mob = require(script.Mob)
+local tower = require(script.Tower)
+local map = workspace.map
+local info = workspace.Info
+local gameover = false
+
+map.Base.Humanoid.HealthChanged:Connect(function(health)
+	if health <= 0 then
+		gameover= true
+	end
+end)
+
+for i=15 , 0, -1 do
+	info.Message.Value = "Game Starting in..." .. i
+	task.wait(1)
+end
+
+for wave =1, 20 do
+	
+	info.Wave.Value = wave
+	info.Message.Value = ""
+	
+	if wave == 1 then
+		mob.Spawn("Zombie",5 * wave, map)
+		---mob.Spawn("OWNER (Phase 1)",1 * wave, map)
+	elseif wave == 2 then
+		mob.Spawn("Zombie",10 * wave, map)
+	elseif wave == 3 then
+		mob.Spawn("Noob",5 * wave, map)
+	elseif wave == 4 then
+		mob.Spawn("Noob",10 * wave, map)
+	elseif wave == 5 then
+		mob.Spawn("Corrupted Noob",5 * wave, map)
+	elseif wave == 6 then
+		mob.Spawn("Corrupted Noob",10 * wave, map)
+	elseif wave == 7 then
+		mob.Spawn("Slender", 5 * wave, map)
+	elseif wave == 8 then
+		mob.Spawn("Slender", 10 * wave, map)
+	elseif wave == 9 then
+		mob.Spawn("Scam Bot", 5 * wave, map)
+	elseif wave == 10 then
+		mob.Spawn("Scam Bot", 10 * wave, map)
+	elseif wave == 11 then
+		mob.Spawn("Zombie",10 * wave, map)
+		mob.Spawn("Noob",10 * wave, map)
+	elseif wave == 12 then
+		mob.Spawn("Noob",10 * wave, map)
+		mob.Spawn("Corrupted Noob",10 * wave, map)
+	elseif wave == 13 then
+		mob.Spawn("Corrupted Noob", 10 * wave, map)
+	elseif wave == 14 then
+		mob.Spawn("Slender",5 * wave, map)
+	elseif wave == 15 then
+		mob.Spawn("Slender",7 * wave, map)
+		mob.Spawn("Scam Bot",2 * wave, map)
+	elseif wave == 16 then
+		mob.Spawn("Noob",10 * wave, map)
+		mob.Spawn("Bacon",10 * wave, map)
+		mob.Spawn("Slender",3 * wave, map)
+	elseif wave == 17 then
+		mob.Spawn("Zombie",10 * wave, map)
+		mob.Spawn("Noob",10 * wave, map)
+		mob.Spawn("Corrupted Noob",10 * wave, map)
+	elseif wave == 18 then
+		mob.Spawn("Zombie",10 * wave, map)
+		mob.Spawn("Noob",10 * wave, map)
+		mob.Spawn("Corrupted Noob",10 * wave, map)
+		mob.Spawn("Slender",4 * wave, map)
+		mob.Spawn("Scam Bot",3 * wave, map)
+		mob.Spawn("OWNER (Phase 1)",1 * wave, map)
+	end
+    
+	repeat	
+	 task.wait(1)
+    until #workspace.Mobs:GetChildren() == 0 or gameOver
+
+	if gameOver then
+		info.Message.Value = "GameOver NOOB"
+		break
+	end
+
+	for i=3 , 0, -1 do
+		info.Message.Value = "Next Wave Starting in..." .. i
+		task.wait(1)
+	end
+	
+end
